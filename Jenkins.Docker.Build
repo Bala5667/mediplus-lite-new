@@ -1,0 +1,26 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'  // Docker image name
+        PROJECT_DIR = 'mediplus-lite'             // Folder containing Dockerfile
+    }
+
+    stages {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dir("${env.PROJECT_DIR}") {               // Go into project folder
+                        bat "docker build -t ${env.DOCKER_IMAGE} ."  // Build Docker image
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "✅ Docker build stage completed"
+        }
+    }
+}
