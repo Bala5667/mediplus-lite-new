@@ -1,0 +1,24 @@
+stage('Build') {
+    steps {
+        sh '''
+        echo "Build stage for HTML/CSS"
+        ls -l
+        '''
+    }
+}
+
+stage('Test') {
+    steps {
+        sh '''
+        echo "Running basic tests"
+
+        # Check index.html exists
+        test -f index.html
+
+        # Check CSS exists
+        test -f style.css
+
+        echo "Tests passed"
+        '''
+    }
+}
