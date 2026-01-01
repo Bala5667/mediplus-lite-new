@@ -1,0 +1,28 @@
+stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                bat 'docker push %DOCKER_IMAGE%:%DOCKER_TAG%'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Docker image pushed successfully to Docker Hub'
+        }
+        failure {
+            echo '❌ Docker push failed'
+        }
+    }
+}
