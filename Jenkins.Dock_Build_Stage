@@ -1,17 +1,25 @@
-pipeline { 
+pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'balaji5667/mediplus-lite'  // Docker image name        
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'
     }
 
     stages {
+
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                script {
-                    dir("${env.PROJECT_DIR}") {               // Go into project folder
-                        bat "docker build -t ${env.DOCKER_IMAGE} -f Dockerfile ."
-                    }
+                dir('mediplus-lite-new') {
+                    bat 'echo Current Directory:'
+                    bat 'cd'
+                    bat 'dir'
+                    bat 'docker build -t %DOCKER_IMAGE% .'
                 }
             }
         }
@@ -19,7 +27,7 @@ pipeline {
 
     post {
         always {
-            echo "✅ Docker build stage completed"
+            echo '✅ Pipeline finished'
         }
     }
 }
