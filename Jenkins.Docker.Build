@@ -1,9 +1,9 @@
-pipeline {
+pipeline { 
     agent any
 
     environment {
         DOCKER_IMAGE = 'balaji5667/mediplus-lite'  // Docker image name
-        PROJECT_DIR = 'C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\css+html+ docker build\\workspace\\mediplus-lite'
+        PROJECT_DIR = 'C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\css_html_docker_build\\workspace\\mediplus-lite'
     }
 
     stages {
@@ -11,7 +11,7 @@ pipeline {
             steps {
                 script {
                     dir("${env.PROJECT_DIR}") {               // Go into project folder
-                        bat "docker build -t ${env.DOCKER_IMAGE} -f ${env.PROJECT_DIR}\\Dockerfile ${env.PROJECT_DIR}"
+                        bat "docker build -t ${env.DOCKER_IMAGE} -f Dockerfile ."
                     }
                 }
             }
