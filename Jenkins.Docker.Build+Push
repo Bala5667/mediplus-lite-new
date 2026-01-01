@@ -1,6 +1,6 @@
 stage('Build Docker Image') {
     steps {
-        sh '''
+        bat '''
         docker build -t html-app:latest .
         '''
     }
@@ -13,7 +13,7 @@ stage('Docker Login') {
             usernameVariable: 'DOCKER_USER',
             passwordVariable: 'DOCKER_PASS'
         )]) {
-            sh '''
+            bat '''
             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
             '''
         }
@@ -22,7 +22,7 @@ stage('Docker Login') {
 
 stage('Docker Tag Image') {
     steps {
-        sh '''
+        bat '''
         docker tag html-app:latest dockerhub-creds/html-app:${BUILD_NUMBER}
         '''
     }
@@ -30,7 +30,7 @@ stage('Docker Tag Image') {
 
 stage('Docker Push Image') {
     steps {
-        sh '''
+        bat '''
         docker push dockerhub-creds/html-app:${BUILD_NUMBER}
         '''
     }
@@ -38,6 +38,6 @@ stage('Docker Push Image') {
 
 stage('Docker Logout') {
     steps {
-        sh 'docker logout'
+        bat 'docker logout'
     }
 }
