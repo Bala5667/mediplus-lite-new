@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'balaji5667/mediplus-lite'  // Docker image name
-        PROJECT_DIR = 'C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\css_html_docker_build\\workspace\\mediplus-lite'
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'  // Docker image name        
     }
 
     stages {
