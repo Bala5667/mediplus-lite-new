@@ -1,11 +1,21 @@
-stage('Login to Docker Hub') {
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'
+        DOCKER_TAG   = 'latest'
+    }
+
+    stages {
+
+        stage('Login to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
                 }
             }
         }
@@ -22,7 +32,10 @@ stage('Login to Docker Hub') {
             echo '✅ Docker image pushed successfully to Docker Hub'
         }
         failure {
-            echo '❌ Docker push failed'
+            echo '❌ Docker image push failed'
+        }
+        always {
+            bat 'docker logout'
         }
     }
 }
