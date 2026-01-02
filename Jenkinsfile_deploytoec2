@@ -5,14 +5,14 @@ pipeline {
         IMAGE_NAME = "balaji5667/mediplus-lite:latest"
         EC2_USER   = "ec2-user"
         EC2_HOST   = "98.84.160.223"
-        PEM_KEY    = "C:\Users\HP\Desktop\Keypairs\\worker-AmazonLinux.pem"
+        PEM_KEY    = "C:/Users/HP/Desktop/Keypairs/worker-AmazonLinux.pem"
     }
 
     stages {
         stage('Deploy to EC2') {
             steps {
                 bat '''
-                ssh -i %PEM_KEY% -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% ^
+                ssh -i "%PEM_KEY%" -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% ^
                 "docker pull %IMAGE_NAME% && ^
                  docker stop mediplus-app || true && ^
                  docker rm mediplus-app || true && ^
