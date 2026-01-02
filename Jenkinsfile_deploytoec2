@@ -4,7 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "balaji5667/mediplus-lite:latest"
         EC2_USER   = "ec2-user"          // ubuntu if Ubuntu EC2
-        EC2_HOST   = "<EC2_PUBLIC_IP>"
+        EC2_HOST   = "98.84.160.223"
     }
 
     stages {
