@@ -1,0 +1,134 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/Bala5667/mediplus-lite-new.git'
+            }
+        }
+    }
+}
+
+stage('Build') {
+    steps {
+        sh '''
+        echo "Build stage for HTML/CSS"
+        ls -l
+        '''
+    }
+}
+
+stage('Test') {
+    steps {
+        sh '''
+        echo "Running basic tests"
+
+        # Check index.html exists
+        test -f index.html
+
+        # Check CSS exists
+        test -f style.css
+
+        echo "Tests passed"
+        '''
+    }
+}
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir('mediplus-lite-new') {
+                    bat 'echo Current Directory:'
+                    bat 'cd'
+                    bat 'dir'
+                    bat 'docker build -t %DOCKER_IMAGE% .'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '✅ Pipeline finished'
+        }
+    }
+}
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'
+        DOCKER_TAG   = 'latest'
+    }
+
+    stages {
+
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                bat 'docker push %DOCKER_IMAGE%:%DOCKER_TAG%'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Docker image pushed successfully to Docker Hub'
+        }
+        failure {
+            echo '❌ Docker image push failed'
+        }
+        always {
+            bat 'docker logout'
+        }
+    }
+}
+
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "balaji5667/mediplus-lite:latest"
+        EC2_USER   = "ec2-user"
+        EC2_HOST   = "98.84.160.223"
+        PEM_KEY    = "C:/Users/HP/Desktop/Keypairs/worker-AmazonLinux.pem"
+    }
+
+    stages {
+        stage('Deploy to EC2') {
+            steps {
+                bat """
+                ssh -i "%PEM_KEY%" -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% ^
+                "docker pull %IMAGE_NAME% && docker stop mediplus-app || true && docker rm mediplus-app || true && docker run -d --name mediplus-app -p 80:80 %IMAGE_NAME%"
+                """
+            }
+        }
+    }
+}
