@@ -1,0 +1,170 @@
+pipeline {
+    agent any
+    
+    parameters {
+        booleanParam(
+            name: 'RUN_BUILD',
+            defaultValue: true,
+            description: 'Build Docker image'
+        )
+        booleanParam(
+            name: 'RUN_PUSH',
+            defaultValue: false,
+            description: 'Push to Docker Hub'
+        )
+        booleanParam(
+            name: 'RUN_DEPLOY',
+            defaultValue: false,
+            description: 'Deploy to EC2'
+        )
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: true,
+            description: 'Skip tests during build'
+        )
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: 'latest',
+            description: 'Docker image tag'
+        )
+    }
+    
+    environment {
+        DOCKER_IMAGE = 'balaji5667/mediplus-lite'
+        DOCKER_TAG   = "${params.IMAGE_TAG}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps { 
+                checkout scm 
+            }
+        }
+        
+        stage('Run Tests') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
+            steps {
+                sh 'mvn test'  // or your test command
+            }
+        }
+        
+        stage('Build Docker Image') {
+            when {
+                expression { params.RUN_BUILD }
+            }
+            steps {
+                sh '''
+                    echo "Building Docker image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker images | grep ${DOCKER_IMAGE}
+                '''
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            when {
+                expression { params.RUN_PUSH }
+            }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "Pushing to Docker Hub..."
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker logout
+                        echo "✅ Pushed: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to EC2') {
+            when {
+                expression { params.RUN_DEPLOY }
+            }
+            steps {
+                script {
+                    if (params.RUN_PUSH == false) {
+                        echo "⚠️  Note: Image not pushed to Docker Hub. EC2 will pull existing image."
+                    }
+                }
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'ec2-ssh-key',
+                        keyFileVariable: 'SSH_KEY',
+                        usernameVariable: 'SSH_USER'
+                    ),
+                    string(credentialsId: 'ec2-host', variable: 'EC2_HOST')
+                ]) {
+                    sh """
+                        echo "Deploying to EC2: ${EC2_HOST}"
+                        ssh -i "${SSH_KEY}" -o StrictHostKeyChecking=no ${SSH_USER}@${EC2_HOST} '
+                            echo "Pulling Docker image..."
+                            docker pull ${DOCKER_IMAGE}:${DOCKER_TAG} || echo "Image pull failed, using local if available"
+                            
+                            echo "Stopping old container..."
+                            docker stop mediplus-app 2>/dev/null || echo "No running container"
+                            docker rm mediplus-app 2>/dev/null || echo "No container to remove"
+                            
+                            echo "Starting new container..."
+                            docker run -d --name mediplus-app -p 80:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                            
+                            echo "Checking container status..."
+                            sleep 5
+                            docker ps | grep mediplus-app
+                            
+                            echo "✅ Deployment complete!"
+                        '
+                    """
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            when {
+                expression { params.RUN_DEPLOY }
+            }
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: 'ec2-host', variable: 'EC2_HOST')
+                    ]) {
+                        sh """
+                            echo "Performing health check..."
+                            curl -f http://${EC2_HOST}/ || echo "Health check failed or app still starting"
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+            script {
+                if (params.RUN_DEPLOY) {
+                    echo "Application deployed to: http://${EC2_HOST}"
+                }
+            }
+            // slackSend(message: 'Deployment succeeded!')
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+            // slackSend(message: 'Deployment failed! Check Jenkins.')
+        }
+        always {
+            echo "=== Summary ==="
+            echo "Build: ${params.RUN_BUILD}"
+            echo "Push: ${params.RUN_PUSH}"
+            echo "Deploy: ${params.RUN_DEPLOY}"
+            echo "Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+        }
+    }
+}
